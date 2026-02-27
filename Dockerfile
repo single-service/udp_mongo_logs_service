@@ -17,6 +17,7 @@ COPY listener/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 COPY listener/clean_logs.py /app/
 COPY listener/listener.py /app/
+COPY listener/db_interfaces /app/db_interfaces
 
 # ==========================
 # Настройка Cron

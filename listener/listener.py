@@ -1,6 +1,5 @@
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime
 import logging
 import os
 import json
@@ -11,12 +10,13 @@ import socket
 from clickhouse_driver import Client
 import psycopg2
 import asyncpg
-from listener.db_interfaces.base import StorageInterface
-from listener.db_interfaces.clickhousedb import ClickHouseStorage
-from listener.db_interfaces.mongodb import MongoStorage
-from listener.db_interfaces.postgesqldb import PostgresStorage
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
+
+from db_interfaces.base import StorageInterface
+from db_interfaces.clickhousedb import ClickHouseStorage
+from db_interfaces.mongodb import MongoStorage
+from db_interfaces.postgesqldb import PostgresStorage
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -37,14 +37,14 @@ class UDPListener:
         # Создаем UDP сокет для приёма
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((self.udp_host, self.udp_port))
-        self.sock.setblocking(False)
         logging.info(f"UDP Listener запущен на {self.udp_host}:{self.udp_port}")
 
     async def listen(self):
-        loop = asyncio.get_running_loop()
         while True:
             try:
-                data, addr = await loop.sock_recvfrom(self.sock, 65535)  # Максимальный размер датаграммы
+                data, addr = await asyncio.to_thread(
+                    self.sock.recvfrom, 65535
+                )  # Максимальный размер датаграммы
                 message = json.loads(data.decode("utf-8"))
                 logging.info(f"Получено сообщение от {addr}: {message}")
                 await self.process_message(message)
@@ -69,19 +69,14 @@ class UDPListener:
         
 def parse_db_url(db_url: str) -> dict:
     parsed = urlparse(db_url)
-    scheme = parsed.scheme 
+    db_type = parsed.scheme 
     user = parsed.username
     password = parsed.password
     host = parsed.hostname
     port = parsed.port
     database = parsed.path.lstrip("/")
-    if "+" in scheme:
-        db_type, driver = scheme.split("+", 1)
-    else:
-        db_type, driver = scheme, "sync"
     return {
         "db_type": db_type,
-        "driver": driver,
         "user": user,
         "password": password,
         "host": host,
@@ -90,8 +85,8 @@ def parse_db_url(db_url: str) -> dict:
     }
        
         
-def create_mongo_client(db_url: str, cfg: dict):
-    if cfg["driver"] == "motor":
+def create_mongo_client(db_url: str, cfg: dict, is_async=False):
+    if is_async:
         client = AsyncIOMotorClient(db_url)
         db = client[cfg.get("database")]
         return MongoStorage(db, is_async=True)
@@ -101,8 +96,8 @@ def create_mongo_client(db_url: str, cfg: dict):
         return MongoStorage(db, is_async=False)
         
         
-async def create_postgres_client(cfg: dict):
-    if cfg["driver"] == "asyncpg":
+async def create_postgres_client(cfg: dict, is_async=False):
+    if is_async:
         conn = await asyncpg.connect(
             user=cfg["user"],
             password=cfg["password"],
@@ -134,11 +129,12 @@ def create_clickhouse_client(cfg: dict):
    
         
 async def create_storage(db_url: str) -> StorageInterface:
+    IS_ASYNC = int(os.getenv("IS_ASYNC", "0"))
     cfg = parse_db_url(db_url)
     if cfg["db_type"] == "mongodb":
-        return create_mongo_client(db_url, cfg)
+        return create_mongo_client(db_url, cfg, IS_ASYNC)
     elif cfg["db_type"] in ("postgresql", "postgres"):
-        return await create_postgres_client(cfg)
+        return await create_postgres_client(cfg, IS_ASYNC)
     elif cfg["db_type"] == "clickhouse":
         return create_clickhouse_client(cfg)
     else:
@@ -152,7 +148,7 @@ async def main():
     DB_URL = os.getenv("DB_URL")
     storage = await create_storage(DB_URL)
     if isinstance(storage, (ClickHouseStorage, PostgresStorage)):
-        storage.init_table()
+        await storage.init_table()
     listener = UDPListener(UDP_HOST, UDP_PORT, storage)
     await listener.listen()
         

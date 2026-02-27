@@ -1,6 +1,7 @@
 import asyncio
+from datetime import datetime
 
-from listener.db_interfaces.base import StorageInterface
+from db_interfaces.base import StorageInterface
 
 
 class PostgresStorage(StorageInterface):
@@ -73,9 +74,9 @@ class PostgresStorage(StorageInterface):
                     $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
                 )
                 """,
-                [
+                *[
                     data.get("uuid"),
-                    data.get("created_dt"),
+                    datetime.fromisoformat(data.get("created_dt")),
                     data.get("pathname"),
                     data.get("funcName"),
                     data.get("lineno"),

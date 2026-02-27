@@ -1,6 +1,6 @@
 import asyncio
 
-from listener.db_interfaces.base import StorageInterface
+from db_interfaces.base import StorageInterface
 
 class MongoStorage(StorageInterface):
 

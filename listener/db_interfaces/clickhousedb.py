@@ -1,6 +1,7 @@
 import asyncio
+from datetime import datetime
 
-from listener.db_interfaces.base import StorageInterface
+from db_interfaces.base import StorageInterface
 
 class ClickHouseStorage(StorageInterface):
 
@@ -9,7 +10,7 @@ class ClickHouseStorage(StorageInterface):
         self.db_name = db_name
         self.table_name = f"{self.db_name}.logs"
         
-    def init_table(self):
+    async def init_table(self):
         create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS {self.table_name}
         (
@@ -41,7 +42,7 @@ class ClickHouseStorage(StorageInterface):
         ORDER BY (created_dt)
         SETTINGS min_bytes_for_wide_part = 0;
         """
-        asyncio.to_thread(self.__init_table_sync, create_table_sql)
+        await asyncio.to_thread(self.__init_table_sync, create_table_sql)
         
     def __init_table_sync(self, create_table_sql):
         self.client.execute(create_table_sql)
@@ -50,6 +51,7 @@ class ClickHouseStorage(StorageInterface):
         await asyncio.to_thread(self._insert_sync, collection, data)
 
     def _insert_sync(self, collection, data):
+        data["created_dt"] = datetime.fromisoformat(data.get("created_dt"))
         columns = list(data.keys())
         values = [list(data.values())]
 
