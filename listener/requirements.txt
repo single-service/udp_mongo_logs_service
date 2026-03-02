@@ -3,3 +3,4 @@ clickhouse-driver
 psycopg2-binary 
 asyncpg
 motor
+python-dotenv

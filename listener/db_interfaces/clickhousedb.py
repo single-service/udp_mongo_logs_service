@@ -1,7 +1,11 @@
 import asyncio
 from datetime import datetime
+import logging
 
 from db_interfaces.base import StorageInterface
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("info")
 
 class ClickHouseStorage(StorageInterface):
 
@@ -59,3 +63,16 @@ class ClickHouseStorage(StorageInterface):
             f"INSERT INTO {collection} ({', '.join(columns)}) VALUES",
             values,
         )
+
+    async def clean_logs(self, retention_days: int):
+        """Универсальная очистка любой таблицы по created_dt."""
+        full_table_name = f"{self.db_name}.logs"
+
+        query = f"""
+            ALTER TABLE {full_table_name}
+            DELETE WHERE created_dt < 
+            toDateTime(now() - toIntervalDay({retention_days}));
+        """
+
+        await asyncio.to_thread(self.client.execute, query)
+        logger.info(f"[{datetime.now()}] Logs older than {retention_days} days deleted.")

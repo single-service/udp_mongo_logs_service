@@ -1,7 +1,11 @@
 import asyncio
 from datetime import datetime
+import logging
 
 from db_interfaces.base import StorageInterface
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger("info")
 
 
 class PostgresStorage(StorageInterface):
@@ -146,6 +150,31 @@ class PostgresStorage(StorageInterface):
                     data.get("server_name"),
                 ],
             )
+            self.conn.commit()
+        finally:
+            cur.close()
+            
+    async def clean_logs(self, retention_days: int):
+        """Удаляет логи старше retention_days по created_dt."""
+        
+        delete_sql = f"""
+            DELETE FROM logs
+            WHERE created_dt < NOW() - INTERVAL '{retention_days} days';
+        """
+
+        if self.is_async:
+            await self.conn.execute(delete_sql)
+        else:
+            await asyncio.to_thread(self._clean_logs_sync, delete_sql)
+
+        logger.info(
+            f"[{datetime.now()}] Logs older than {retention_days} days deleted."
+        )
+        
+    def _clean_logs_sync(self, delete_sql):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(delete_sql)
             self.conn.commit()
         finally:
             cur.close()

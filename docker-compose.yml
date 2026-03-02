@@ -4,12 +4,11 @@ services:
     ports:
       - "9999:9999/udp" # UDP
     environment:
-      - LOG_RETENTION_DAYS=30
-      - APM_RETENTION_DAYS=30
+      - LOG_RETENTION_DAYS=1
       # Примеры форматов url баз данных
 
       # - DB_URL=mongodb://host.docker.internal:27017/logs
-      # - DB_URL=postgresql://postgres:12345678@host.docker.internal:5432/postgres
+      - DB_URL=postgresql://postgres:12345678@host.docker.internal:5432/postgres
       # - DB_URL=clickhouse://default:@host.docker.internal:9000/default
 
       # Если IS_ASYNC=0 или не указан, то будет синхронная работа с базой, если IS_ASYNC=1 то асинхронная
