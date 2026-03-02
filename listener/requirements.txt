@@ -1,1 +1,6 @@
 pymongo==4.11.2
+clickhouse-driver
+psycopg2-binary 
+asyncpg
+motor
+python-dotenv

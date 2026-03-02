@@ -17,6 +17,8 @@ COPY listener/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 COPY listener/clean_logs.py /app/
 COPY listener/listener.py /app/
+COPY listener/db_interfaces /app/db_interfaces
+COPY start_cron.sh /app/
 
 # ==========================
 # Настройка Cron
@@ -29,6 +31,7 @@ RUN chmod 0644 /etc/cron.d/clean_logs
 RUN crontab /etc/cron.d/clean_logs
 # Создаем файл логов для cron
 RUN touch /var/log/cron.log
+RUN chmod +x /app/start_cron.sh
 
 # ==========================
 # Настройка Supervisor

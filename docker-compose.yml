@@ -4,30 +4,36 @@ services:
     ports:
       - "9999:9999/udp" # UDP
     environment:
-      - LOG_RETENTION_DAYS=30
-      - APM_RETENTION_DAYS=30
-      - DB_URL=mongodb://admin:admin@mongo:27017/
+      - LOG_RETENTION_DAYS=1
+      # Примеры форматов url баз данных
 
-  mongo:
-    container_name: mongo
-    image: mongo:4.4.15
-    env_file:
-      - .envs/.mongodb
-    ports:
-      - 27017:27017
-    volumes:
-      - logs-db-volume:/data/db
-    restart: on-failure
+      # - DB_URL=mongodb://host.docker.internal:27017/logs
+      - DB_URL=postgresql://postgres:12345678@host.docker.internal:5432/postgres
+      # - DB_URL=clickhouse://default:@host.docker.internal:9000/default
 
-  mongo-express:
-    container_name: mongo_express
-    image: mongo-express:latest
-    env_file:
-      - .envs/.mongo_express
-    depends_on:
-        - mongo
-    ports:
-      - "8888:8081"
+      # Если IS_ASYNC=0 или не указан, то будет синхронная работа с базой, если IS_ASYNC=1 то асинхронная
+      # - IS_ASYNC=1
 
-volumes:
-  logs-db-volume:
+#   mongo:
+#     container_name: mongo
+#     image: mongo:4.4.15
+#     env_file:
+#       - .envs/.mongodb
+#     ports:
+#       - 27017:27017
+#     volumes:
+#       - logs-db-volume:/data/db
+#     restart: on-failure
+
+#   mongo-express:
+#     container_name: mongo_express
+#     image: mongo-express:latest
+#     env_file:
+#       - .envs/.mongo_express
+#     depends_on:
+#         - mongo
+#     ports:
+#       - "8888:8081"
+
+# volumes:
+#   logs-db-volume:
